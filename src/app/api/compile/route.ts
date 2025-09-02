@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Babel from "@babel/standalone";
 import { render } from "@react-email/render";
 import React from "react";
+import {
+  Html,
+  Head,
+  Preview,
+  Body,
+  Container,
+  Text,
+  Heading,
+  Section,
+  Button,
+  Link,
+  Hr,
+  Img,
+  Column,
+  Row,
+} from "@react-email/components";
 
 // Configure Babel with available presets
 const babelConfig = {
@@ -17,20 +33,20 @@ const babelConfig = {
 
 // Register React Email components globally for compiled code
 const reactEmailComponents = {
-  Html: require("@react-email/components").Html,
-  Head: require("@react-email/components").Head,
-  Preview: require("@react-email/components").Preview,
-  Body: require("@react-email/components").Body,
-  Container: require("@react-email/components").Container,
-  Text: require("@react-email/components").Text,
-  Heading: require("@react-email/components").Heading,
-  Section: require("@react-email/components").Section,
-  Button: require("@react-email/components").Button,
-  Link: require("@react-email/components").Link,
-  Hr: require("@react-email/components").Hr,
-  Img: require("@react-email/components").Img,
-  Column: require("@react-email/components").Column,
-  Row: require("@react-email/components").Row,
+  Html,
+  Head,
+  Preview,
+  Body,
+  Container,
+  Text,
+  Heading,
+  Section,
+  Button,
+  Link,
+  Hr,
+  Img,
+  Column,
+  Row,
 };
 
 export async function POST(req: NextRequest) {
@@ -58,7 +74,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Create a safe execution environment
-      const moduleExports: { default?: React.ComponentType<any> } = {};
+      const moduleExports: { default?: React.ComponentType<Record<string, unknown>> } = {};
       const require = (moduleName: string) => {
         if (moduleName === "react") return React;
         if (moduleName.startsWith("@react-email/components")) {
@@ -75,23 +91,23 @@ export async function POST(req: NextRequest) {
       const execFunction = new Function(
         "React",
         "require",
-        "module",
+        "moduleContainer",
         "exports",
         ...Object.keys(reactEmailComponents),
         compiledCode || ""
       );
 
-      const module = { exports: moduleExports };
+      const moduleContainer = { exports: moduleExports };
       execFunction(
         React,
         require,
-        module,
+        moduleContainer,
         moduleExports,
         ...Object.values(reactEmailComponents)
       );
 
       // Get the default export (the React component)
-      const EmailComponent = module.exports.default || moduleExports.default;
+      const EmailComponent = moduleContainer.exports.default || moduleExports.default;
       
       if (!EmailComponent) {
         throw new Error("No default export found in React code. Make sure to export your component as default.");

@@ -7,7 +7,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { templates, options = {} } = body as {
-      templates?: any[];
+      templates?: Array<{
+        name: string;
+        type: string;
+        content: string;
+        variables?: Record<string, unknown>;
+        createdAt?: Date | string;
+        updatedAt?: Date | string;
+        [key: string]: unknown;
+      }>;
       version?: string;
       exportDate?: string;
       options?: {

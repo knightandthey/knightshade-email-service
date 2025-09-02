@@ -1,9 +1,6 @@
 "use client";
 import React, { useState, useCallback, useRef } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+// DnD Kit imports removed - not currently used but may be needed later
 import { ChromePicker } from 'react-color';
 import RichTextEditor from './RichTextEditor';
 
@@ -19,7 +16,7 @@ import {
 export interface EmailElement {
   id: string;
   type: string;
-  props: Record<string, any>;
+  props: Record<string, unknown>;
   children?: EmailElement[];
 }
 
@@ -260,6 +257,7 @@ function EmailElementRenderer({
         
       case 'image':
         return (
+          // eslint-disable-next-line @next/next/no-img-element
           <img 
             src={props.src || 'https://via.placeholder.com/600x300'}
             alt={props.alt || 'Image'}
@@ -383,7 +381,7 @@ function PropertyEditor({
   onUpdateElement 
 }: { 
   element: EmailElement | null; 
-  onUpdateElement: (elementId: string, newProps: Record<string, any>) => void;
+  onUpdateElement: (elementId: string, newProps: Record<string, unknown>) => void;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
   
@@ -401,7 +399,7 @@ function PropertyEditor({
   const componentDef = [...EMAIL_COMPONENTS, ...TEMPLATE_BLOCKS].find(c => c.id === element.type);
   if (!componentDef) return null;
 
-  const handlePropertyChange = (propertyName: string, value: any) => {
+  const handlePropertyChange = (propertyName: string, value: unknown) => {
     onUpdateElement(element.id, { ...element.props, [propertyName]: value });
   };
 
@@ -557,29 +555,9 @@ function PropertyEditor({
 }
 
 // Main Visual Email Builder Component
-export default function VisualEmailBuilder({ onEmailChange, initialContent }: VisualEmailBuilderProps) {
+export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBuilderProps, 'initialContent'>) {
   const [elements, setElements] = useState<EmailElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<EmailElement | null>(null);
-
-  const handleElementsChange = useCallback((newElements: EmailElement[]) => {
-    setElements(newElements);
-    generateEmailHTML(newElements);
-  }, [generateEmailHTML]);
-
-  const handleUpdateElement = useCallback((elementId: string, newProps: Record<string, any>) => {
-    const updatedElements = elements.map(el => 
-      el.id === elementId ? { ...el, props: newProps } : el
-    );
-    setElements(updatedElements);
-    
-    // Update the selected element as well
-    if (selectedElement?.id === elementId) {
-      setSelectedElement({ ...selectedElement, props: newProps });
-    }
-    
-    // Regenerate HTML with updated content
-    generateEmailHTML(updatedElements);
-  }, [selectedElement, elements, generateEmailHTML]);
 
   const generateEmailHTML = useCallback((elements: EmailElement[]) => {
     // Generate actual HTML instead of React code
@@ -709,6 +687,26 @@ export default function VisualEmailBuilder({ onEmailChange, initialContent }: Vi
 
     onEmailChange(fullHTML);
   }, [onEmailChange]);
+
+  const handleElementsChange = useCallback((newElements: EmailElement[]) => {
+    setElements(newElements);
+    generateEmailHTML(newElements);
+  }, [generateEmailHTML]);
+
+  const handleUpdateElement = useCallback((elementId: string, newProps: Record<string, unknown>) => {
+    const updatedElements = elements.map(el => 
+      el.id === elementId ? { ...el, props: newProps } : el
+    );
+    setElements(updatedElements);
+    
+    // Update the selected element as well
+    if (selectedElement?.id === elementId) {
+      setSelectedElement({ ...selectedElement, props: newProps });
+    }
+    
+    // Regenerate HTML with updated content
+    generateEmailHTML(updatedElements);
+  }, [selectedElement, elements, generateEmailHTML]);
 
   return (
     <div className="h-screen flex bg-gray-50">

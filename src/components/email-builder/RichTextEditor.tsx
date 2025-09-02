@@ -95,19 +95,26 @@ export default function RichTextEditor({
       const range = selection.getRangeAt(0);
       range.deleteContents();
       
-      // Create text nodes with line breaks preserved
+      // Insert nodes in natural order by advancing the range after each insertion
       const lines = processedText.split('\n');
       lines.forEach((line, index) => {
         if (index > 0) {
-          range.insertNode(document.createElement('br'));
+          const br = document.createElement('br');
+          range.insertNode(br);
+          // Move caret after the inserted <br>
+          range.setStartAfter(br);
+          range.setEndAfter(br);
         }
         if (line.trim()) {
-          range.insertNode(document.createTextNode(line));
+          const textNode = document.createTextNode(line);
+          range.insertNode(textNode);
+          // Move caret after the inserted text
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
         }
       });
       
-      // Move cursor to end
-      range.collapse(false);
+      // Place cursor at end of inserted content
       selection.removeAllRanges();
       selection.addRange(range);
     } else {

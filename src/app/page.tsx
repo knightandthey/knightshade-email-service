@@ -5,6 +5,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback } from "react";
+import Link from "next/link";
 
 type TemplateMeta = {
   id: string;
@@ -143,12 +144,12 @@ export default function Home() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">Email Service</h1>
           <div className="flex space-x-4">
-            <a
+            <Link
               href="/"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Simple Compose
-            </a>
+            </Link>
             <a
               href="/compose"
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"

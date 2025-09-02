@@ -5,7 +5,7 @@ export interface ComponentDefinition {
   category: string;
   icon: string;
   description: string;
-  defaultProps: Record<string, any>;
+  defaultProps: Record<string, unknown>;
   editableProps: ComponentProperty[];
   template: string;
   previewImage?: string;
@@ -15,7 +15,7 @@ export interface ComponentProperty {
   name: string;
   label: string;
   type: 'text' | 'number' | 'color' | 'select' | 'boolean' | 'textarea' | 'url' | 'spacing';
-  default: any;
+  default: unknown;
   options?: { value: string; label: string }[];
   description?: string;
 }

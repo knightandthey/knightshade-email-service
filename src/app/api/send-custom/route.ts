@@ -145,7 +145,21 @@ export async function POST(req: NextRequest) {
 
   try {
     // Send the email
-    const emailData: any = {
+    const emailData: {
+      to: string | string[];
+      cc?: string | string[];
+      bcc?: string | string[];
+      from: string;
+      subject: string;
+      html: string;
+      text?: string;
+      attachments?: Array<{
+        filename: string;
+        content: string;
+        type: string;
+        disposition: string;
+      }>;
+    } = {
       to,
       cc,
       bcc,
