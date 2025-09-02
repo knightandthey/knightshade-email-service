@@ -564,19 +564,22 @@ export default function VisualEmailBuilder({ onEmailChange, initialContent }: Vi
   const handleElementsChange = useCallback((newElements: EmailElement[]) => {
     setElements(newElements);
     generateEmailHTML(newElements);
-  }, []);
+  }, [generateEmailHTML]);
 
   const handleUpdateElement = useCallback((elementId: string, newProps: Record<string, any>) => {
-    setElements(prev => 
-      prev.map(el => 
-        el.id === elementId ? { ...el, props: newProps } : el
-      )
+    const updatedElements = elements.map(el => 
+      el.id === elementId ? { ...el, props: newProps } : el
     );
+    setElements(updatedElements);
+    
     // Update the selected element as well
     if (selectedElement?.id === elementId) {
       setSelectedElement({ ...selectedElement, props: newProps });
     }
-  }, [selectedElement]);
+    
+    // Regenerate HTML with updated content
+    generateEmailHTML(updatedElements);
+  }, [selectedElement, elements, generateEmailHTML]);
 
   const generateEmailHTML = useCallback((elements: EmailElement[]) => {
     // Generate actual HTML instead of React code
@@ -587,38 +590,84 @@ export default function VisualEmailBuilder({ onEmailChange, initialContent }: Vi
       // Convert React-style template to HTML
       let htmlTemplate = componentDef.template;
       
-      // Replace React Email components with HTML equivalents
+      // First, replace template variables with actual values
+      Object.entries(element.props).forEach(([key, value]) => {
+        let processedValue = String(value);
+        
+        // Escape HTML and handle line breaks for text content
+        if (key === 'children' || key === 'content' || key === 'title' || key === 'subtitle') {
+          processedValue = processedValue
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/\n/g, '<br>');
+        }
+        
+        const regex = new RegExp(`{${key}}`, 'g');
+        htmlTemplate = htmlTemplate.replace(regex, processedValue);
+      });
+
+      // Then convert React Email components to HTML with proper style handling
       htmlTemplate = htmlTemplate
-        .replace(/<Section[^>]*>/g, '<div style="margin: 16px 0;">')
-        .replace(/<\/Section>/g, '</div>')
-        .replace(/<Text[^>]*>/g, '<p style="margin: 8px 0; line-height: 1.6;">')
-        .replace(/<\/Text>/g, '</p>')
+        // Handle Heading with dynamic styles
+        .replace(/<Heading[^>]*style=\{([^}]+)\}[^>]*>/g, (match, styleObj) => {
+          // Extract styles from React object notation
+          const styles = styleObj
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((s: string) => {
+              const [key, value] = s.split(':').map((part: string) => part.trim().replace(/['"]/g, ''));
+              const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+              return `${cssKey}: ${value}`;
+            })
+            .join('; ');
+          return `<h2 style="${styles}">`;
+        })
         .replace(/<Heading[^>]*>/g, '<h2 style="margin: 16px 0; font-size: 24px; font-weight: bold;">')
         .replace(/<\/Heading>/g, '</h2>')
+        
+        // Handle Text with dynamic styles
+        .replace(/<Text[^>]*style=\{([^}]+)\}[^>]*>/g, (match, styleObj) => {
+          const styles = styleObj
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((s: string) => {
+              const [key, value] = s.split(':').map((part: string) => part.trim().replace(/['"]/g, ''));
+              const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+              return `${cssKey}: ${value}`;
+            })
+            .join('; ');
+          return `<p style="${styles}">`;
+        })
+        .replace(/<Text[^>]*>/g, '<p style="margin: 8px 0; line-height: 1.6;">')
+        .replace(/<\/Text>/g, '</p>')
+        
+        // Handle Button with href and styles
+        .replace(/<Button[^>]*href="([^"]*)"[^>]*style=\{([^}]+)\}[^>]*>/g, (match, href, styleObj) => {
+          const styles = styleObj
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((s: string) => {
+              const [key, value] = s.split(':').map((part: string) => part.trim().replace(/['"]/g, ''));
+              const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+              return `${cssKey}: ${value}`;
+            })
+            .join('; ');
+          return `<a href="${href}" style="display: inline-block; text-decoration: none; ${styles}">`;
+        })
         .replace(/<Button[^>]*href="([^"]*)"[^>]*>/g, '<a href="$1" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">')
         .replace(/<\/Button>/g, '</a>')
+        
+        // Handle other components
+        .replace(/<Section[^>]*>/g, '<div style="margin: 16px 0;">')
+        .replace(/<\/Section>/g, '</div>')
         .replace(/<Img[^>]*src="([^"]*)"[^>]*>/g, '<img src="$1" style="max-width: 100%; height: auto;" />')
         .replace(/<Hr[^>]*>/g, '<hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;" />')
         .replace(/<Row[^>]*>/g, '<div style="display: table; width: 100%;">')
         .replace(/<\/Row>/g, '</div>')
         .replace(/<Column[^>]*>/g, '<div style="display: table-cell; vertical-align: top; padding: 8px;">')
         .replace(/<\/Column>/g, '</div>');
-      
-      // Replace template variables with actual values
-      Object.entries(element.props).forEach(([key, value]) => {
-        let processedValue = String(value);
-        
-        // Escape HTML and handle line breaks
-        processedValue = processedValue
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/\n/g, '<br>');
-        
-        const regex = new RegExp(`{${key}}`, 'g');
-        htmlTemplate = htmlTemplate.replace(regex, processedValue);
-      });
 
       return htmlTemplate;
     }).join('\n');
