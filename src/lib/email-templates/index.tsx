@@ -7,15 +7,15 @@ export type TemplateDescriptor = {
   name: string;
   description?: string;
   variables: Record<string, string>;
-  render: (variables: Record<string, unknown>) => string;
+  render: (variables: Record<string, unknown>) => Promise<string>;
 };
 
-function renderWelcome(vars: Record<string, unknown>): string {
+async function renderWelcome(vars: Record<string, unknown>): Promise<string> {
   const v = vars as unknown as WelcomeEmailVariables;
   return render(<WelcomeEmail {...v} />);
 }
 
-function renderReset(vars: Record<string, unknown>): string {
+async function renderReset(vars: Record<string, unknown>): Promise<string> {
   const v = vars as unknown as ResetPasswordEmailVariables;
   return render(<ResetPasswordEmail {...v} />);
 }

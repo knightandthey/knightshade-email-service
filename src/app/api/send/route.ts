@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     subject,
     templateId,
     variables,
+    attachments,
   } = body as {
     to: string;
     cc?: string;
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     subject: string;
     templateId: string;
     variables: Record<string, unknown>;
+    attachments?: Array<{ filename: string; content: string; type?: string }>;
   };
 
   const template = getTemplateById(templateId);
@@ -39,7 +41,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
-  const html = template.render(variables || {});
+  const html = await template.render(variables || {});
+  const text = typeof variables?.plaintext === "string" ? (variables.plaintext as string) : undefined;
   const fromAddress = from || EMAIL_FROM || "no-reply@example.com";
 
   const emails = await getCollection<EmailLog>("emails");
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
     status: "queued",
     createdAt: new Date(),
   };
-  const insertResult = await emails.insertOne(queuedLog as any);
+  const insertResult = await emails.insertOne(queuedLog);
 
   try {
     const { data, error } = await resend.emails.send({
@@ -64,6 +67,13 @@ export async function POST(req: NextRequest) {
       from: fromAddress,
       subject,
       html,
+      text,
+      attachments,
+      headers: {
+        "List-Unsubscribe": `<${new URL(req.url).origin}/api/unsubscribe>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      reply_to: fromAddress,
     });
     if (error) throw error;
 

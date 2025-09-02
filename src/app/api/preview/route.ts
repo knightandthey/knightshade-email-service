@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
   try {
-    const html = template.render(variables || {});
+    const html = await template.render(variables || {});
     return new NextResponse(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });

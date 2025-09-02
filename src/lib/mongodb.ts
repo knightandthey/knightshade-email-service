@@ -1,4 +1,4 @@
-import { MongoClient, MongoClientOptions, Db, Collection } from "mongodb";
+import { MongoClient, MongoClientOptions, Db, Collection, type Document } from "mongodb";
 
 const uri = process.env.MONGODB_URI || "";
 const dbName = process.env.MONGODB_DB || "knightshade-email-service";
@@ -26,7 +26,7 @@ export async function getDb(): Promise<Db> {
   return db;
 }
 
-export async function getCollection<T = unknown>(name: string): Promise<Collection<T>> {
+export async function getCollection<T extends Document = Document>(name: string): Promise<Collection<T>> {
   const db = await getDb();
   return db.collection<T>(name);
 }
