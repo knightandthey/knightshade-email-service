@@ -1,103 +1,179 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+type TemplateMeta = {
+  id: string;
+  name: string;
+  description?: string;
+  variables: Record<string, string>;
+};
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const schema = z.object({
+  to: z.string().email(),
+  cc: z.string().email().optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  bcc: z.string().email().optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  from: z.string().email().optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  subject: z.string().min(1),
+  templateId: z.string().min(1),
+});
+
+type FormValues = z.infer<typeof schema> & {
+  variables: Record<string, string>;
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { data: templates }: { data?: TemplateMeta[] } = useSWR(
+    "/api/templates",
+    fetcher
+  );
+  const [selected, setSelected] = useState<string>("");
+  const selectedTemplate = useMemo(
+    () => templates?.find((t) => t.id === selected),
+    [templates, selected]
+  );
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema as any),
+    defaultValues: {
+      from: process.env.NEXT_PUBLIC_DEFAULT_FROM,
+      variables: {},
+    } as any,
+  });
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      setValue("templateId", selectedTemplate.id as any);
+      const defaults: Record<string, string> = {};
+      Object.entries(selectedTemplate.variables).forEach(([k, v]) => {
+        defaults[k] = v;
+      });
+      setValue("variables", defaults as any);
+    }
+  }, [selectedTemplate, setValue]);
+
+  const variables = watch("variables");
+
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  useEffect(() => {
+    async function updatePreview() {
+      if (!selectedTemplate) return;
+      const res = await fetch("/api/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: selectedTemplate.id, variables }),
+      });
+      const text = await res.text();
+      setPreviewHtml(text);
+    }
+    updatePreview();
+  }, [selectedTemplate, variables]);
+
+  async function onSubmit(values: FormValues) {
+    await fetch("/api/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+  }
+
+  return (
+    <div className="min-h-screen p-6 sm:p-10">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <h1 className="text-2xl font-semibold">Compose Email</h1>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="col-span-2">
+              <span className="block text-sm mb-1">To</span>
+              <input className="w-full border rounded px-3 py-2" {...register("to")} />
+              {errors.to && <p className="text-red-600 text-sm">{errors.to.message as any}</p>}
+            </label>
+            <label>
+              <span className="block text-sm mb-1">CC</span>
+              <input className="w-full border rounded px-3 py-2" {...register("cc")} />
+            </label>
+            <label>
+              <span className="block text-sm mb-1">BCC</span>
+              <input className="w-full border rounded px-3 py-2" {...register("bcc")} />
+            </label>
+            <label className="col-span-2">
+              <span className="block text-sm mb-1">From</span>
+              <input className="w-full border rounded px-3 py-2" {...register("from")} />
+            </label>
+            <label className="col-span-2">
+              <span className="block text-sm mb-1">Subject</span>
+              <input className="w-full border rounded px-3 py-2" {...register("subject")} />
+            </label>
+          </div>
+
+          <div>
+            <span className="block text-sm mb-1">Template</span>
+            <select
+              className="w-full border rounded px-3 py-2"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              <option value="">Select a template</option>
+              {templates?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedTemplate && (
+            <div>
+              <h2 className="text-lg font-medium mb-2">Template Variables</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.keys(selectedTemplate.variables).map((key) => (
+                  <label key={key} className="flex flex-col">
+                    <span className="text-sm mb-1">{key}</span>
+                    <input
+                      className="border rounded px-3 py-2"
+                      value={variables?.[key] || ""}
+                      onChange={(e) =>
+                        setValue("variables", { ...variables, [key]: e.target.value } as any)
+                      }
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
+            disabled={isSubmitting}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {isSubmitting ? "Sending..." : "Send Email"}
+          </button>
+        </form>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Live Preview</h2>
+          <div className="border rounded h-[70vh] overflow-auto bg-white">
+            {previewHtml ? (
+              // eslint-disable-next-line @next/next/no-html-link-for-pages
+              <iframe title="preview" className="w-full h-full" srcDoc={previewHtml} />
+            ) : (
+              <div className="p-6 text-gray-500">Select a template to preview.</div>
+            )}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
