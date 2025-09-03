@@ -82,7 +82,7 @@ export default function RichTextEditor({
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
     
-    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    const clipboardData = e.clipboardData || (window as typeof window & { clipboardData?: DataTransfer }).clipboardData;
     let pastedData = clipboardData.getData('text/plain') || clipboardData.getData('text');
     
     if (!pastedData) return;

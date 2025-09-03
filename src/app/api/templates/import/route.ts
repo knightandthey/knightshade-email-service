@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
         name: string;
         type: string;
         content: string;
-        variables?: Record<string, unknown>;
+        variables?: Record<string, string>;
         createdAt?: Date | string;
         updatedAt?: Date | string;
         [key: string]: unknown;
@@ -48,13 +48,13 @@ export async function POST(req: NextRequest) {
         }
 
         // Generate new ID if requested or if ID doesn't exist
-        let templateId = templateData.id;
+        let templateId = typeof templateData.id === 'string' ? templateData.id : undefined;
         if (!templateId || options.generateNewIds) {
           templateId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         }
 
         // Check if template already exists
-        const existingTemplate = await templatesCollection.findOne({ id: templateId });
+        const existingTemplate = await templatesCollection.findOne({ id: templateId as string });
 
         if (existingTemplate && !options.overwrite) {
           results.skipped++;
@@ -62,13 +62,13 @@ export async function POST(req: NextRequest) {
         }
 
         const templateToSave: CustomTemplate = {
-          id: templateId,
-          name: templateData.name,
-          description: templateData.description,
-          type: templateData.type,
-          content: templateData.content,
-          variables: templateData.variables || {},
-          createdAt: templateData.createdAt ? new Date(templateData.createdAt) : new Date(),
+          id: templateId as string,
+          name: templateData.name as string,
+          description: typeof templateData.description === 'string' ? templateData.description : undefined,
+          type: templateData.type as "react" | "html" | "css" | "javascript" | "plaintext",
+          content: templateData.content as string,
+          variables: (templateData.variables as Record<string, string>) || {},
+          createdAt: templateData.createdAt ? new Date(templateData.createdAt as string | Date) : new Date(),
           updatedAt: new Date(),
         };
 

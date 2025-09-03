@@ -20,6 +20,61 @@ export interface EmailElement {
   children?: EmailElement[];
 }
 
+// Define specific prop types for different components
+interface BaseComponentProps {
+  fontSize?: number;
+  color?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  children?: string;
+}
+
+interface HeadingProps extends BaseComponentProps {
+  fontSize?: number;
+}
+
+interface TextProps extends BaseComponentProps {
+  lineHeight?: number;
+}
+
+interface ButtonProps extends BaseComponentProps {
+  backgroundColor?: string;
+  textColor?: string;
+  padding?: string;
+  borderRadius?: number;
+  href?: string;
+  buttonText?: string;
+}
+
+interface ImageProps {
+  src?: string;
+  alt?: string;
+  width?: string;
+  borderRadius?: number;
+}
+
+interface HrProps {
+  color?: string;
+  thickness?: number;
+  marginTop?: number;
+  marginBottom?: number;
+}
+
+interface HeroSectionProps {
+  backgroundColor?: string;
+  title?: string;
+  subtitle?: string;
+  buttonText?: string;
+}
+
+interface PricingCardProps {
+  title?: string;
+  price?: string;
+  period?: string;
+  buttonText?: string;
+}
+
+
+
 interface VisualEmailBuilderProps {
   onEmailChange: (html: string) => void;
   initialContent?: string;
@@ -190,12 +245,6 @@ function EmailElementRenderer({
   onDelete: () => void;
 }) {
   // Helper function to convert text with line breaks to JSX
-  const escapeHtml = (s: string) => s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 
   const mdInlineToHtml = (raw: string) => {
     if (!raw) return '';
@@ -271,95 +320,101 @@ function EmailElementRenderer({
     
     switch (type) {
       case 'heading':
+        const headingProps = props as HeadingProps;
         return (
           <div 
             style={{ 
-              fontSize: (props as any).fontSize || 32, 
+              fontSize: headingProps.fontSize || 32, 
               fontWeight: 'bold', 
-              color: (props as any).color || '#111827',
-              textAlign: (props as any).textAlign || 'left',
+              color: headingProps.color || '#111827',
+              textAlign: headingProps.textAlign || 'left',
               whiteSpace: 'normal'
             }}
-            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String((props as any).children || 'Heading')) }}
+            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String(headingProps.children || 'Heading')) }}
           />
         );
         
       case 'text':
+        const textProps = props as TextProps;
         return (
           <div 
             style={{ 
-              fontSize: (props as any).fontSize || 16, 
-              color: (props as any).color || '#374151',
-              lineHeight: `${(props as any).lineHeight || 24}px`,
-              textAlign: (props as any).textAlign || 'left',
+              fontSize: textProps.fontSize || 16, 
+              color: textProps.color || '#374151',
+              lineHeight: `${textProps.lineHeight || 24}px`,
+              textAlign: textProps.textAlign || 'left',
               whiteSpace: 'normal'
             }}
-            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String((props as any).children || 'Text content')) }}
+            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String(textProps.children || 'Text content')) }}
           />
         );
         
       case 'button':
+        const buttonProps = props as ButtonProps;
         return (
           <div 
             style={{ 
               display: 'inline-block',
-              backgroundColor: (props as any).backgroundColor || '#4f46e5',
-              color: (props as any).textColor || '#ffffff',
-              padding: (props as any).padding || '12px 24px',
-              borderRadius: `${(props as any).borderRadius || 8}px`,
-              fontSize: (props as any).fontSize || 16,
+              backgroundColor: buttonProps.backgroundColor || '#4f46e5',
+              color: buttonProps.textColor || '#ffffff',
+              padding: buttonProps.padding || '12px 24px',
+              borderRadius: `${buttonProps.borderRadius || 8}px`,
+              fontSize: buttonProps.fontSize || 16,
               fontWeight: 'bold',
               cursor: 'pointer',
               textAlign: 'center',
               whiteSpace: 'pre-wrap'
             }}
           >
-            {mdInlineToHtml((props as any).children || 'Button')}
+            {mdInlineToHtml(buttonProps.children || 'Button')}
           </div>
         );
         
       case 'image':
+        const imageProps = props as ImageProps;
         return (
           // eslint-disable-next-line @next/next/no-img-element
           <img 
-            src={(props as any).src || 'https://via.placeholder.com/600x300'}
-            alt={(props as any).alt || 'Image'}
+            src={imageProps.src || 'https://via.placeholder.com/600x300'}
+            alt={imageProps.alt || 'Image'}
             style={{ 
-              width: (props as any).width || '100%',
+              width: imageProps.width || '100%',
               height: 'auto',
-              borderRadius: `${(props as any).borderRadius || 12}px`,
+              borderRadius: `${imageProps.borderRadius || 12}px`,
               objectFit: 'cover'
             }}
           />
         );
         
       case 'hr':
+        const hrProps = props as HrProps;
         return (
           <hr 
             style={{ 
-              borderColor: (props as any).color || '#d1d5db',
-              borderWidth: `${(props as any).thickness || 1}px`,
-              marginTop: `${(props as any).marginTop || 16}px`,
-              marginBottom: `${(props as any).marginBottom || 16}px`
+              borderColor: hrProps.color || '#d1d5db',
+              borderWidth: `${hrProps.thickness || 1}px`,
+              marginTop: `${hrProps.marginTop || 16}px`,
+              marginBottom: `${hrProps.marginBottom || 16}px`
             }} 
           />
         );
         
       case 'hero_section':
+        const heroProps = props as HeroSectionProps;
         return (
           <div 
             style={{ 
-              backgroundColor: (props as any).backgroundColor || '#f8fafc',
+              backgroundColor: heroProps.backgroundColor || '#f8fafc',
               padding: '48px 24px',
               textAlign: 'center',
               borderRadius: '8px'
             }}
           >
             <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#111827', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-              {mdInlineToHtml((props as any).title || 'Welcome')}
+              {mdInlineToHtml(heroProps.title || 'Welcome')}
             </h1>
             <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '32px', whiteSpace: 'pre-wrap' }}>
-              {mdInlineToHtml((props as any).subtitle || 'Get started with our service')}
+              {mdInlineToHtml(heroProps.subtitle || 'Get started with our service')}
             </p>
             <div 
               style={{ 
@@ -372,12 +427,13 @@ function EmailElementRenderer({
                 fontWeight: '600'
               }}
             >
-              {mdInlineToHtml((props as any).buttonText || 'Get Started')}
+              {mdInlineToHtml(heroProps.buttonText || 'Get Started')}
             </div>
           </div>
         );
 
       case 'pricing_card':
+        const pricingProps = props as PricingCardProps;
         return (
           <div style={{ 
             backgroundColor: 'white',
@@ -387,10 +443,10 @@ function EmailElementRenderer({
             textAlign: 'center'
           }}>
             <div style={{ color: '#4f46e5', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-              {mdInlineToHtml((props as any).title || 'Premium Plan')}
+              {mdInlineToHtml(pricingProps.title || 'Premium Plan')}
             </div>
             <div style={{ fontSize: '30px', fontWeight: 'bold', color: '#111827', marginBottom: '12px', whiteSpace: 'pre-wrap' }}>
-              {mdInlineToHtml((props as any).price || '$29')} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>{mdInlineToHtml((props as any).period || '/month')}</span>
+              {mdInlineToHtml(pricingProps.price || '$29')} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>{mdInlineToHtml(pricingProps.period || '/month')}</span>
             </div>
             <div style={{ 
               backgroundColor: '#4f46e5',
@@ -400,7 +456,7 @@ function EmailElementRenderer({
               fontSize: '16px',
               fontWeight: '600'
             }}>
-              {mdInlineToHtml((props as any).buttonText || 'Choose Plan')}
+              {mdInlineToHtml(pricingProps.buttonText || 'Choose Plan')}
             </div>
           </div>
         );
@@ -475,7 +531,7 @@ function PropertyEditor({
         if (prop.name === 'children' || prop.name === 'content') {
           return (
             <RichTextEditor
-              value={currentValue}
+              value={String(currentValue || '')}
               onChange={(value) => handlePropertyChange(prop.name, value)}
               placeholder={`Enter ${prop.label.toLowerCase()}...`}
               className="w-full"
@@ -485,7 +541,7 @@ function PropertyEditor({
         return (
           <input
             type="text"
-            value={currentValue}
+            value={String(currentValue || '')}
             onChange={(e) => handlePropertyChange(prop.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
@@ -494,7 +550,7 @@ function PropertyEditor({
       case 'textarea':
         return (
           <RichTextEditor
-            value={currentValue}
+            value={String(currentValue || '')}
             onChange={(value) => handlePropertyChange(prop.name, value)}
             placeholder={`Enter ${prop.label.toLowerCase()}...`}
             className="w-full min-h-[100px]"
@@ -505,7 +561,7 @@ function PropertyEditor({
         return (
           <input
             type="number"
-            value={currentValue}
+            value={Number(currentValue) || 0}
             onChange={(e) => handlePropertyChange(prop.name, Number(e.target.value))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
@@ -517,10 +573,10 @@ function PropertyEditor({
             <div
               onClick={() => setColorPickerOpen(colorPickerOpen === prop.name ? null : prop.name)}
               className="w-full h-10 border border-gray-300 rounded-md cursor-pointer flex items-center px-3"
-              style={{ backgroundColor: currentValue }}
+              style={{ backgroundColor: String(currentValue || '#000000') }}
             >
               <span className="text-sm font-medium text-white drop-shadow-sm">
-                {currentValue}
+                {String(currentValue || '#000000')}
               </span>
             </div>
             {colorPickerOpen === prop.name && (
@@ -530,7 +586,7 @@ function PropertyEditor({
                   onClick={() => setColorPickerOpen(null)}
                 />
                 <ChromePicker
-                  color={currentValue}
+                  color={String(currentValue || '#000000')}
                   onChange={(color) => handlePropertyChange(prop.name, color.hex)}
                 />
               </div>
@@ -541,7 +597,7 @@ function PropertyEditor({
       case 'select':
         return (
           <select
-            value={currentValue}
+            value={String(currentValue || '')}
             onChange={(e) => handlePropertyChange(prop.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
@@ -557,7 +613,7 @@ function PropertyEditor({
         return (
           <input
             type="url"
-            value={currentValue}
+            value={String(currentValue || '')}
             onChange={(e) => handlePropertyChange(prop.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="https://example.com"
@@ -568,7 +624,7 @@ function PropertyEditor({
         return (
           <input
             type="text"
-            value={currentValue}
+            value={String(currentValue || '')}
             onChange={(e) => handlePropertyChange(prop.name, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="e.g., 12px 24px"
@@ -580,7 +636,7 @@ function PropertyEditor({
           <label className="flex items-center">
             <input
               type="checkbox"
-              checked={currentValue}
+              checked={Boolean(currentValue)}
               onChange={(e) => handlePropertyChange(prop.name, e.target.checked)}
               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
@@ -686,7 +742,7 @@ export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBu
       // Then convert React Email components to HTML with proper style handling
       htmlTemplate = htmlTemplate
         // Handle Heading with dynamic styles
-        .replace(/<Heading[^>]*style=\{([^}]+)\}[^>]*>/g, (match, styleObj) => {
+        .replace(/<Heading[^>]*style=\{([^}]+)\}[^>]*>/g, (match: string, styleObj: string) => {
           // Extract styles from React object notation
           const styles = styleObj
             .replace(/[{}]/g, '')
@@ -703,7 +759,7 @@ export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBu
         .replace(/<\/Heading>/g, '</h2>')
         
         // Handle Text with dynamic styles
-        .replace(/<Text[^>]*style=\{([^}]+)\}[^>]*>/g, (match, styleObj) => {
+        .replace(/<Text[^>]*style=\{([^}]+)\}[^>]*>/g, (match: string, styleObj: string) => {
           const styles = styleObj
             .replace(/[{}]/g, '')
             .split(',')
@@ -719,7 +775,7 @@ export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBu
         .replace(/<\/Text>/g, '</p>')
         
         // Handle Button with href and styles
-        .replace(/<Button[^>]*href="([^"]*)"[^>]*style=\{([^}]+)\}[^>]*>/g, (match, href, styleObj) => {
+        .replace(/<Button[^>]*href="([^"]*)"[^>]*style=\{([^}]+)\}[^>]*>/g, (match: string, href: string, styleObj: string) => {
           const styles = styleObj
             .replace(/[{}]/g, '')
             .split(',')

@@ -39,23 +39,15 @@ const isDisplayNameAddress = (value: string) => {
 
 const schema = z.object({
   to: z.string().email(),
-  cc: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z.string().email().optional()
-  ),
-  bcc: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z.string().email().optional()
-  ),
-  from: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z
-      .string()
-      .refine((val) => isPlainEmail(val) || isDisplayNameAddress(val), {
-        message: "Enter an email or \"Name <email@domain>\"",
-      })
-      .optional()
-  ),
+  cc: z.string().email().optional().or(z.literal("")),
+  bcc: z.string().email().optional().or(z.literal("")),
+  from: z
+    .string()
+    .refine((val) => val === "" || isPlainEmail(val) || isDisplayNameAddress(val), {
+      message: "Enter an email or \"Name <email@domain>\"",
+    })
+    .optional()
+    .or(z.literal("")),
   subject: z.string().min(1),
   content: z.string().min(1),
   mode: z.enum(["visual", "template", "html", "react", "css", "javascript", "plaintext"]),
@@ -513,7 +505,6 @@ export default function ComposePage() {
                 setValue("content", html);
                 setPreviewHtml(html);
               }}
-              initialContent={content}
             />
           </div>
         ) : (

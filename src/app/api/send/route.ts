@@ -7,7 +7,7 @@ import { getServerEnv } from "@/lib/env";
 function sanitizeHtmlContent(html: string): string {
   let out = html;
   // Remove hidden preview padding blocks
-  out = out.replace(/<div[^>]*data-skip-in-text[^>]*>.*?<\/div>/gis, "");
+  out = out.replace(/<div[^>]*data-skip-in-text[^>]*>[\s\S]*?<\/div>/gim, "");
   // Remove leftover template placeholders like {color}, {fontSize}
   out = out.replace(/\{[a-zA-Z0-9_]+\}/g, "");
   // Collapse excessive <span><br/></span>
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         "Feedback-ID": "knightshade-email-service:transactional", // some filters use it
       },
-      reply_to: fromAddress,
+      replyTo: fromAddress,
     });
     if (error) throw error;
 

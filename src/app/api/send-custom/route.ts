@@ -5,7 +5,7 @@ import { getServerEnv } from "@/lib/env";
 
 function sanitizeHtmlContent(html: string): string {
   let out = html;
-  out = out.replace(/<div[^>]*data-skip-in-text[^>]*>.*?<\/div>/gis, "");
+  out = out.replace(/<div[^>]*data-skip-in-text[^>]*>[\s\S]*?<\/div>/gim, "");
   out = out.replace(/\{[a-zA-Z0-9_]+\}/g, "");
   out = out.replace(/<span>\s*<br\s*\/>\s*<\/span>/g, "<br>");
   out = out.replace(/(<br\s*\/>\s*){3,}/g, "<br><br>");
@@ -188,6 +188,8 @@ export async function POST(req: NextRequest) {
       subject: string;
       html: string;
       text?: string;
+      replyTo?: string;
+      headers?: Record<string, string>;
       attachments?: Array<{
         filename: string;
         content: string;
@@ -201,7 +203,12 @@ export async function POST(req: NextRequest) {
       from: fromAddress,
       subject,
       html: finalHtml,
-      attachments,
+      attachments: attachments?.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        type: att.type || 'application/octet-stream',
+        disposition: 'attachment'
+      })),
     };
 
     // Add text version for plaintext mode
@@ -210,7 +217,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Add helpful headers to improve deliverability
-    emailData.reply_to = fromAddress;
+    emailData.replyTo = fromAddress;
     const domainMatch = fromAddress.match(/<[^@>]+@([^>]+)>/) || fromAddress.match(/@([^>\s]+)/);
     const fromDomain = domainMatch ? domainMatch[1] : undefined;
     emailData.headers = {
