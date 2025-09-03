@@ -190,15 +190,80 @@ function EmailElementRenderer({
   onDelete: () => void;
 }) {
   // Helper function to convert text with line breaks to JSX
-  const formatTextContent = (text: string) => {
-    if (!text) return text;
-    
-    return text.split('\n').map((line, index, array) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < array.length - 1 && <br />}
-      </React.Fragment>
-    ));
+  const escapeHtml = (s: string) => s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const mdInlineToHtml = (raw: string) => {
+    if (!raw) return '';
+    const escapeHtml = (s: string) => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const lines = raw.split('\n');
+    const toInline = (s: string) => {
+      let t = escapeHtml(s);
+      t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      t = t.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+      t = t.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>');
+      return t;
+    };
+    const headingSize = (level: number) => {
+      const sizes = [32, 28, 24, 20, 18, 16];
+      return sizes[Math.min(Math.max(level, 1), 6) - 1];
+    };
+
+    const blocks: string[] = [];
+    let listOpen: null | 'ul' | 'ol' = null;
+
+    const closeList = () => {
+      if (listOpen) {
+        blocks.push(`</${listOpen}>`);
+        listOpen = null;
+      }
+    };
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        closeList();
+        continue;
+      }
+      const h = trimmed.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        closeList();
+        const lvl = h[1].length;
+        blocks.push(`<h${lvl} style="margin:8px 0;font-size:${headingSize(lvl)}px;font-weight:700;">${toInline(h[2])}</h${lvl}>`);
+        continue;
+      }
+      const ol = trimmed.match(/^\d+\.\s+(.*)$/);
+      if (ol) {
+        if (listOpen && listOpen !== 'ol') closeList();
+        if (!listOpen) { listOpen = 'ol'; blocks.push('<ol style="margin:8px 0 8px 20px;">'); }
+        blocks.push(`<li>${toInline(ol[1])}</li>`);
+        continue;
+      }
+      const ul = trimmed.match(/^[-*]\s+(.*)$/);
+      if (ul) {
+        if (listOpen && listOpen !== 'ul') closeList();
+        if (!listOpen) { listOpen = 'ul'; blocks.push('<ul style="margin:8px 0 8px 20px;">'); }
+        blocks.push(`<li>${toInline(ul[1])}</li>`);
+        continue;
+      }
+      // paragraph
+      closeList();
+      blocks.push(`<p style="margin:8px 0;">${toInline(trimmed)}</p>`);
+    }
+    closeList();
+
+    return blocks.join('');
   };
 
   const renderElement = () => {
@@ -209,30 +274,28 @@ function EmailElementRenderer({
         return (
           <div 
             style={{ 
-              fontSize: props.fontSize || 32, 
+              fontSize: (props as any).fontSize || 32, 
               fontWeight: 'bold', 
-              color: props.color || '#111827',
-              textAlign: props.textAlign || 'left',
-              whiteSpace: 'pre-wrap'
+              color: (props as any).color || '#111827',
+              textAlign: (props as any).textAlign || 'left',
+              whiteSpace: 'normal'
             }}
-          >
-            {formatTextContent(props.children || 'Heading')}
-          </div>
+            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String((props as any).children || 'Heading')) }}
+          />
         );
         
       case 'text':
         return (
           <div 
             style={{ 
-              fontSize: props.fontSize || 16, 
-              color: props.color || '#374151',
-              lineHeight: `${props.lineHeight || 24}px`,
-              textAlign: props.textAlign || 'left',
-              whiteSpace: 'pre-wrap'
+              fontSize: (props as any).fontSize || 16, 
+              color: (props as any).color || '#374151',
+              lineHeight: `${(props as any).lineHeight || 24}px`,
+              textAlign: (props as any).textAlign || 'left',
+              whiteSpace: 'normal'
             }}
-          >
-            {formatTextContent(props.children || 'Text content')}
-          </div>
+            dangerouslySetInnerHTML={{ __html: mdInlineToHtml(String((props as any).children || 'Text content')) }}
+          />
         );
         
       case 'button':
@@ -240,18 +303,18 @@ function EmailElementRenderer({
           <div 
             style={{ 
               display: 'inline-block',
-              backgroundColor: props.backgroundColor || '#4f46e5',
-              color: props.textColor || '#ffffff',
-              padding: props.padding || '12px 24px',
-              borderRadius: `${props.borderRadius || 8}px`,
-              fontSize: props.fontSize || 16,
+              backgroundColor: (props as any).backgroundColor || '#4f46e5',
+              color: (props as any).textColor || '#ffffff',
+              padding: (props as any).padding || '12px 24px',
+              borderRadius: `${(props as any).borderRadius || 8}px`,
+              fontSize: (props as any).fontSize || 16,
               fontWeight: 'bold',
               cursor: 'pointer',
               textAlign: 'center',
               whiteSpace: 'pre-wrap'
             }}
           >
-            {formatTextContent(props.children || 'Button')}
+            {mdInlineToHtml((props as any).children || 'Button')}
           </div>
         );
         
@@ -259,12 +322,12 @@ function EmailElementRenderer({
         return (
           // eslint-disable-next-line @next/next/no-img-element
           <img 
-            src={props.src || 'https://via.placeholder.com/600x300'}
-            alt={props.alt || 'Image'}
+            src={(props as any).src || 'https://via.placeholder.com/600x300'}
+            alt={(props as any).alt || 'Image'}
             style={{ 
-              width: props.width || '100%',
+              width: (props as any).width || '100%',
               height: 'auto',
-              borderRadius: `${props.borderRadius || 12}px`,
+              borderRadius: `${(props as any).borderRadius || 12}px`,
               objectFit: 'cover'
             }}
           />
@@ -274,10 +337,10 @@ function EmailElementRenderer({
         return (
           <hr 
             style={{ 
-              borderColor: props.color || '#d1d5db',
-              borderWidth: `${props.thickness || 1}px`,
-              marginTop: `${props.marginTop || 16}px`,
-              marginBottom: `${props.marginBottom || 16}px`
+              borderColor: (props as any).color || '#d1d5db',
+              borderWidth: `${(props as any).thickness || 1}px`,
+              marginTop: `${(props as any).marginTop || 16}px`,
+              marginBottom: `${(props as any).marginBottom || 16}px`
             }} 
           />
         );
@@ -286,17 +349,17 @@ function EmailElementRenderer({
         return (
           <div 
             style={{ 
-              backgroundColor: props.backgroundColor || '#f8fafc',
+              backgroundColor: (props as any).backgroundColor || '#f8fafc',
               padding: '48px 24px',
               textAlign: 'center',
               borderRadius: '8px'
             }}
           >
             <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#111827', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-              {formatTextContent(props.title || 'Welcome')}
+              {mdInlineToHtml((props as any).title || 'Welcome')}
             </h1>
             <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '32px', whiteSpace: 'pre-wrap' }}>
-              {formatTextContent(props.subtitle || 'Get started with our service')}
+              {mdInlineToHtml((props as any).subtitle || 'Get started with our service')}
             </p>
             <div 
               style={{ 
@@ -309,7 +372,7 @@ function EmailElementRenderer({
                 fontWeight: '600'
               }}
             >
-              {formatTextContent(props.buttonText || 'Get Started')}
+              {mdInlineToHtml((props as any).buttonText || 'Get Started')}
             </div>
           </div>
         );
@@ -324,10 +387,10 @@ function EmailElementRenderer({
             textAlign: 'center'
           }}>
             <div style={{ color: '#4f46e5', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-              {formatTextContent(props.title || 'Premium Plan')}
+              {mdInlineToHtml((props as any).title || 'Premium Plan')}
             </div>
             <div style={{ fontSize: '30px', fontWeight: 'bold', color: '#111827', marginBottom: '12px', whiteSpace: 'pre-wrap' }}>
-              {formatTextContent(props.price || '$29')} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>{formatTextContent(props.period || '/month')}</span>
+              {mdInlineToHtml((props as any).price || '$29')} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>{mdInlineToHtml((props as any).period || '/month')}</span>
             </div>
             <div style={{ 
               backgroundColor: '#4f46e5',
@@ -337,7 +400,7 @@ function EmailElementRenderer({
               fontSize: '16px',
               fontWeight: '600'
             }}>
-              {formatTextContent(props.buttonText || 'Choose Plan')}
+              {mdInlineToHtml((props as any).buttonText || 'Choose Plan')}
             </div>
           </div>
         );
@@ -370,7 +433,7 @@ function EmailElementRenderer({
       )}
       
       {/* Hover overlay */}
-      <div className={`absolute inset-0 pointer-events-none ${isSelected ? 'bg-blue-500 bg-opacity-10' : 'group-hover:bg-gray-500 group-hover:bg-opacity-10'}`} />
+      <div className={`absolute inset-0 pointer-events-none ${isSelected ? 'bg-blue-500/10' : 'group-hover:bg-gray-500/10'}`} />
     </div>
   );
 }
@@ -561,6 +624,43 @@ export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBu
 
   const generateEmailHTML = useCallback((elements: EmailElement[]) => {
     // Generate actual HTML instead of React code
+    const escapeHtml = (s: string) => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const mdInlineToHtml = (raw: string) => {
+      if (!raw) return '';
+      const lines = raw.split('\n');
+      const toInline = (s: string) => {
+        let t = escapeHtml(s);
+        t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        t = t.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        t = t.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>');
+        return t;
+      };
+      const headingSize = (level: number) => {
+        const sizes = [32, 28, 24, 20, 18, 16];
+        return sizes[Math.min(Math.max(level, 1), 6) - 1];
+      };
+      return lines
+        .map((line) => {
+          const m = line.match(/^(#{1,6})\s+(.*)$/);
+          if (m) {
+            const lvl = m[1].length;
+            const content = toInline(m[2]);
+            return `<span style="display:block; font-weight:700; font-size:${headingSize(lvl)}px; margin: 8px 0;">${content}</span>`;
+          }
+          const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+          if (bullet) {
+            return `<span style="display:block;">• ${toInline(bullet[1])}</span>`;
+          }
+          return `<span>${toInline(line)}</span>`;
+        })
+        .join('<br>');
+    };
     const componentsHTML = elements.map(element => {
       const componentDef = [...EMAIL_COMPONENTS, ...TEMPLATE_BLOCKS].find(c => c.id === element.type);
       if (!componentDef) return '';
@@ -572,14 +672,11 @@ export default function VisualEmailBuilder({ onEmailChange }: Omit<VisualEmailBu
       Object.entries(element.props).forEach(([key, value]) => {
         let processedValue = String(value);
         
-        // Escape HTML and handle line breaks for text content
-        if (key === 'children' || key === 'content' || key === 'title' || key === 'subtitle') {
-          processedValue = processedValue
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/\n/g, '<br>');
+        // Convert Markdown to inline HTML for text-bearing props
+        if (key === 'children' || key === 'content' || key === 'title' || key === 'subtitle' || key === 'description') {
+          processedValue = mdInlineToHtml(processedValue);
+        } else {
+          processedValue = escapeHtml(processedValue);
         }
         
         const regex = new RegExp(`{${key}}`, 'g');

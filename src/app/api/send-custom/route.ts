@@ -3,8 +3,42 @@ import { Resend } from "resend";
 import { getCollection, type EmailLog } from "@/lib/mongodb";
 import { getServerEnv } from "@/lib/env";
 
+function sanitizeHtmlContent(html: string): string {
+  let out = html;
+  out = out.replace(/<div[^>]*data-skip-in-text[^>]*>.*?<\/div>/gis, "");
+  out = out.replace(/\{[a-zA-Z0-9_]+\}/g, "");
+  out = out.replace(/<span>\s*<br\s*\/>\s*<\/span>/g, "<br>");
+  out = out.replace(/(<br\s*\/>\s*){3,}/g, "<br><br>");
+  out = out.replace(/color:\s*color\s*;?/gi, "");
+  out = out.replace(/\sstyle="([^"]*)"/gi, (_m, s: string) => {
+    const safe = s
+      .split(';')
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0)
+      .filter((r) => !/[{}]/.test(r))
+      .map((r) => {
+        const m = r.match(/^([a-zA-Z\-]+)\s*:\s*(.+)$/);
+        if (!m) return '';
+        const prop = m[1].toLowerCase();
+        const val = m[2].trim();
+        if (!val || val === 'px' || val === 'em' || val === 'rem' || val === 'color') return '';
+        const allowed = [
+          'color', 'background-color', 'font-size', 'font-weight', 'line-height', 'text-align',
+          'border-radius', 'padding', 'margin', 'display', 'max-width', 'height', 'width',
+        ];
+        if (!allowed.includes(prop)) return '';
+        if (/['"{}]/.test(val) || val.length > 100) return '';
+        return `${prop}:${val}`;
+      })
+      .filter(Boolean)
+      .join(';');
+    return safe ? ` style="${safe}"` : '';
+  });
+  return out;
+}
+
 export async function POST(req: NextRequest) {
-  const { RESEND_API_KEY, EMAIL_FROM } = getServerEnv();
+  const { RESEND_API_KEY, EMAIL_FROM, BASE_URL } = getServerEnv();
   if (!RESEND_API_KEY) {
     return NextResponse.json(
       { error: "Missing RESEND_API_KEY" },
@@ -120,6 +154,7 @@ export async function POST(req: NextRequest) {
       `;
     }
     // For HTML mode, use content as-is (finalHtml = content)
+    finalHtml = sanitizeHtmlContent(finalHtml);
   } catch (error) {
     console.error("Error processing custom content:", error);
     return NextResponse.json(
@@ -176,9 +211,12 @@ export async function POST(req: NextRequest) {
 
     // Add helpful headers to improve deliverability
     emailData.reply_to = fromAddress;
+    const domainMatch = fromAddress.match(/<[^@>]+@([^>]+)>/) || fromAddress.match(/@([^>\s]+)/);
+    const fromDomain = domainMatch ? domainMatch[1] : undefined;
     emailData.headers = {
-      "List-Unsubscribe": `<${new URL(req.url).origin}/api/unsubscribe>`,
+      "List-Unsubscribe": `${fromDomain ? `<mailto:unsubscribe@${fromDomain}?subject=unsubscribe>, ` : ""}<${(BASE_URL || new URL(req.url).origin) + "/api/unsubscribe"}>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      "Feedback-ID": "knightshade-email-service:transactional",
     } as Record<string, string>;
 
     const { data, error } = await resend.emails.send(emailData);

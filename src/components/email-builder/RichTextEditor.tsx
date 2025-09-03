@@ -69,7 +69,12 @@ export default function RichTextEditor({
     if (!editorRef.current) return;
     
     const html = editorRef.current.innerHTML;
-    const text = htmlToText(html);
+    let text = htmlToText(html);
+    // Normalize zero-width and special spacing chars
+    text = text
+      .replace(/[\u200B-\u200D\uFEFF\u2060\u2800]/g, '') // zero-width and braille blank
+      .replace(/\u00A0/g, ' ')
+      .replace(/[ \t]+$/gm, '');
     onChange(text);
   }, [onChange, htmlToText]);
 
@@ -78,9 +83,14 @@ export default function RichTextEditor({
     e.preventDefault();
     
     const clipboardData = e.clipboardData || (window as any).clipboardData;
-    const pastedData = clipboardData.getData('text/plain') || clipboardData.getData('text');
+    let pastedData = clipboardData.getData('text/plain') || clipboardData.getData('text');
     
     if (!pastedData) return;
+
+    // Normalize invisible characters and whitespace
+    pastedData = pastedData
+      .replace(/[\u200B-\u200D\uFEFF\u2060\u2800]/g, '')
+      .replace(/\u00A0/g, ' ');
 
     // Process the pasted text to preserve line breaks and basic formatting
     const processedText = pastedData

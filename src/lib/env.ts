@@ -2,16 +2,10 @@ import { z } from "zod";
 
 const serverEnvSchema = z.object({
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
-  EMAIL_FROM: z
-    .union([
-      z.string().email(),
-      z
-        .string()
-        .regex(/^.+<[^<>@\s]+@[^<>@\s]+>$/, "EMAIL_FROM must be an email or 'Name <email>'"),
-    ])
-    .optional(),
+  EMAIL_FROM: z.string().email().optional(),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   MONGODB_DB: z.string().optional(),
+  BASE_URL: z.string().url().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -25,6 +19,7 @@ export function getServerEnv(): ServerEnv {
       EMAIL_FROM: process.env.EMAIL_FROM,
       MONGODB_URI: (process.env.MONGODB_URI as string) || "",
       MONGODB_DB: process.env.MONGODB_DB,
+      BASE_URL: process.env.BASE_URL,
     } as ServerEnv;
     return fallback;
   }

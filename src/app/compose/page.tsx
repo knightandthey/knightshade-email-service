@@ -748,7 +748,7 @@ export default function ComposePage() {
 
       {/* Template Save Modal */}
       {isTemplateSaveMode && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Save as Template</h3>
             
@@ -810,7 +810,7 @@ export default function ComposePage() {
 
       {/* Email Send Modal for Visual Mode */}
       {showEmailForm && mode === "visual" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Email</h3>
             
